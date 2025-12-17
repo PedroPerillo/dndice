@@ -36,6 +36,7 @@ The client uses the REST API which works fine with IPv4, so your current setup i
 ## Environment Variables for Vercel:
 
 Make sure these are set in your Vercel project:
+
 - `VITE_SUPABASE_URL` - Your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon key
 
@@ -56,4 +57,3 @@ If you need to run the `supabase-schema.sql` file:
 - ⚠️ **Only use pooler** if you need direct database connections (we don't)
 
 Your current setup should work perfectly on Vercel! 🚀
-
