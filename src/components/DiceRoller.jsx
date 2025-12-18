@@ -35,6 +35,9 @@ function DiceRoller({ user }) {
   const [newQuickRollName, setNewQuickRollName] = useState('');
   const [newQuickRollModifier, setNewQuickRollModifier] = useState(0);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDiceTypeExpanded, setIsDiceTypeExpanded] = useState(false);
+  const [isModifierExpanded, setIsModifierExpanded] = useState(false);
+  const [isDiceCountExpanded, setIsDiceCountExpanded] = useState(false);
   const isInitialMount = useRef(true);
   const isLoadingQuickRolls = useRef(false);
 
@@ -448,110 +451,163 @@ function DiceRoller({ user }) {
             )}
           </div>
 
-          {/* Dice Type Selection */}
+          {/* Dice Type Selection - Collapsible */}
           <div className="mb-4 sm:mb-6">
-            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
-              Select Dice Type
-            </label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
-              {DICE_TYPES.map((dice) => (
-                <button
-                  key={dice.value}
-                  onClick={() => setSelectedDice(dice.value)}
-                  className={`backdrop-blur-md rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 transition-all duration-300 border-2 w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 flex items-center justify-center ${
-                    selectedDice === dice.value
-                      ? `${getSelectedDiceClasses()} text-white shadow-lg scale-105`
-                      : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20 hover:border-white/30'
-                  }`}
-                >
-                  <div className="text-base sm:text-lg md:text-xl font-bold">{dice.label}</div>
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setIsDiceTypeExpanded(!isDiceTypeExpanded)}
+              className="w-full backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg sm:rounded-xl p-3 sm:p-4 flex items-center justify-between transition-all duration-300"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-white text-base sm:text-lg font-semibold">Dice Type</span>
+                <span className={`backdrop-blur-md rounded-lg px-3 py-1 text-sm sm:text-base font-bold ${getSelectedDiceClasses()} text-white`}>
+                  {DICE_TYPES.find(d => d.value === selectedDice)?.label || `d${selectedDice}`}
+                </span>
+              </div>
+              <span className="text-white/60 text-xl">
+                {isDiceTypeExpanded ? '−' : '+'}
+              </span>
+            </button>
+            {isDiceTypeExpanded && (
+              <div className="mt-3 grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
+                {DICE_TYPES.map((dice) => (
+                  <button
+                    key={dice.value}
+                    onClick={() => {
+                      setSelectedDice(dice.value);
+                      setIsDiceTypeExpanded(false);
+                    }}
+                    className={`backdrop-blur-md rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 transition-all duration-300 border-2 w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 flex items-center justify-center ${
+                      selectedDice === dice.value
+                        ? `${getSelectedDiceClasses()} text-white shadow-lg scale-105`
+                        : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20 hover:border-white/30'
+                    }`}
+                  >
+                    <div className="text-base sm:text-lg md:text-xl font-bold">{dice.label}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Modifier Section */}
+          {/* Modifier Section - Collapsible */}
           <div className="mb-4 sm:mb-6">
-            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
-              Modifier: {modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : '0'}
-            </label>
-            {/* Quick Modifier Buttons */}
-            <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                <button
-                  key={value}
-                  onClick={() => setModifier(value)}
-                  className={`backdrop-blur-md rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white transition-all duration-300 border ${
-                    modifier === value
-                      ? `${getSelectedDiceClasses()} shadow-lg scale-105`
-                      : 'bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/30'
-                  }`}
-                >
-                  +{value}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                onClick={() => setModifier(Math.max(-50, modifier - 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
-              >
-                −
-              </button>
-              <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 text-center">
-                <input
-                  type="number"
-                  min="-50"
-                  max="50"
-                  value={modifier}
-                  onChange={(e) => {
-                    const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
-                    setModifier(value);
-                  }}
-                  className="w-full bg-transparent text-white text-xl sm:text-2xl md:text-3xl font-bold text-center outline-none"
-                />
+            <button
+              onClick={() => setIsModifierExpanded(!isModifierExpanded)}
+              className="w-full backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg sm:rounded-xl p-3 sm:p-4 flex items-center justify-between transition-all duration-300"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-white text-base sm:text-lg font-semibold">Modifier</span>
+                <span className={`backdrop-blur-md rounded-lg px-3 py-1 text-sm sm:text-base font-bold ${modifier !== 0 ? getSelectedDiceClasses() : 'bg-white/10 border-white/20'} text-white border`}>
+                  {modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : '0'}
+                </span>
               </div>
-              <button
-                onClick={() => setModifier(Math.min(50, modifier + 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
-              >
-                +
-              </button>
-            </div>
+              <span className="text-white/60 text-xl">
+                {isModifierExpanded ? '−' : '+'}
+              </span>
+            </button>
+            {isModifierExpanded && (
+              <div className="mt-3 space-y-3">
+                {/* Quick Modifier Buttons */}
+                <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setModifier(value);
+                        setIsModifierExpanded(false);
+                      }}
+                      className={`backdrop-blur-md rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white transition-all duration-300 border ${
+                        modifier === value
+                          ? `${getSelectedDiceClasses()} shadow-lg scale-105`
+                          : 'bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/30'
+                      }`}
+                    >
+                      +{value}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <button
+                    onClick={() => setModifier(Math.max(-50, modifier - 1))}
+                    className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 text-center">
+                    <input
+                      type="number"
+                      min="-50"
+                      max="50"
+                      value={modifier}
+                      onChange={(e) => {
+                        const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
+                        setModifier(value);
+                      }}
+                      className="w-full bg-transparent text-white text-xl sm:text-2xl md:text-3xl font-bold text-center outline-none"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setModifier(Math.min(50, modifier + 1))}
+                    className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Dice Count Selection */}
+          {/* Dice Count Selection - Collapsible */}
           <div className="mb-4 sm:mb-6">
-            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
-              Number of Dice: {diceCount}
-            </label>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                onClick={() => setDiceCount(Math.max(1, diceCount - 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
-              >
-                −
-              </button>
-              <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 text-center">
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={diceCount}
-                  onChange={(e) => {
-                    const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
-                    setDiceCount(value);
-                  }}
-                  className="w-full bg-transparent text-white text-xl sm:text-2xl md:text-3xl font-bold text-center outline-none"
-                />
+            <button
+              onClick={() => setIsDiceCountExpanded(!isDiceCountExpanded)}
+              className="w-full backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg sm:rounded-xl p-3 sm:p-4 flex items-center justify-between transition-all duration-300"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-white text-base sm:text-lg font-semibold">Number of Dice</span>
+                <span className={`backdrop-blur-md rounded-lg px-3 py-1 text-sm sm:text-base font-bold ${getSelectedDiceClasses()} text-white border`}>
+                  {diceCount}
+                </span>
               </div>
-              <button
-                onClick={() => setDiceCount(Math.min(20, diceCount + 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
-              >
-                +
-              </button>
-            </div>
+              <span className="text-white/60 text-xl">
+                {isDiceCountExpanded ? '−' : '+'}
+              </span>
+            </button>
+            {isDiceCountExpanded && (
+              <div className="mt-3 flex items-center gap-2 sm:gap-4">
+                <button
+                  onClick={() => {
+                    setDiceCount(Math.max(1, diceCount - 1));
+                    setIsDiceCountExpanded(false);
+                  }}
+                  className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
+                >
+                  −
+                </button>
+                <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 text-center">
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={diceCount}
+                    onChange={(e) => {
+                      const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
+                      setDiceCount(value);
+                    }}
+                    className="w-full bg-transparent text-white text-xl sm:text-2xl md:text-3xl font-bold text-center outline-none"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setDiceCount(Math.min(20, diceCount + 1));
+                    setIsDiceCountExpanded(false);
+                  }}
+                  className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
+                >
+                  +
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Roll Button */}
