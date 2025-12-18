@@ -38,4 +38,3 @@
 4. Or go to **Settings → API** directly
 
 The URL format is always: `https://[your-project-ref].supabase.co`
-
