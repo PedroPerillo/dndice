@@ -135,11 +135,7 @@ function DiceRoller({ user }) {
       });
 
       setSavedQuickRolls([...savedQuickRolls, newRoll]);
-      setShowAddQuickRoll(false);
-      setNewQuickRollCount(1);
-      setNewQuickRollDice(20);
-      setNewQuickRollName('');
-      setNewQuickRollModifier(0);
+      closeAddQuickRollModal();
     } catch (error) {
       alert(`Failed to save quick roll: ${error.message}`);
       console.error('Add quick roll error:', error);
@@ -188,8 +184,137 @@ function DiceRoller({ user }) {
     return 'bg-forest-600/40 border-forest-400/50';
   };
 
+  const closeAddQuickRollModal = () => {
+    setShowAddQuickRoll(false);
+    setNewQuickRollCount(1);
+    setNewQuickRollDice(20);
+    setNewQuickRollName('');
+    setNewQuickRollModifier(0);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+    <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 relative z-10">
+      {/* Add Quick Roll Modal */}
+      {showAddQuickRoll && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeAddQuickRollModal}>
+          <div 
+            className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-white text-lg sm:text-xl font-semibold">
+                Create Quick Roll
+              </label>
+              <button
+                onClick={closeAddQuickRollModal}
+                className="text-white/60 hover:text-white text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-white/80 mb-1.5 text-sm">Name (Optional)</label>
+                <input
+                  type="text"
+                  value={newQuickRollName}
+                  onChange={(e) => setNewQuickRollName(e.target.value)}
+                  placeholder={`e.g., "Attack Roll" or "${newQuickRollCount}d${newQuickRollDice}"`}
+                  className="w-full backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2.5 text-white placeholder-white/40 outline-none focus:border-white/40 transition-colors text-sm"
+                  maxLength={30}
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 mb-1.5 text-sm">Number of Dice</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setNewQuickRollCount(Math.max(1, newQuickRollCount - 1))}
+                    className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white font-bold transition-all duration-300 text-lg"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={newQuickRollCount}
+                    onChange={(e) => {
+                      const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
+                      setNewQuickRollCount(value);
+                    }}
+                    className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2.5 text-white text-center font-bold outline-none text-sm sm:text-base"
+                  />
+                  <button
+                    onClick={() => setNewQuickRollCount(Math.min(20, newQuickRollCount + 1))}
+                    className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white font-bold transition-all duration-300 text-lg"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-white/80 mb-1.5 text-sm">Dice Type</label>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
+                  {DICE_TYPES.map((dice) => (
+                    <button
+                      key={dice.value}
+                      onClick={() => setNewQuickRollDice(dice.value)}
+                      className={`backdrop-blur-md rounded-lg p-2 sm:p-3 transition-all duration-300 border-2 ${
+                        newQuickRollDice === dice.value
+                          ? `${getSelectedDiceClasses()} text-white shadow-lg scale-105`
+                          : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="text-xs sm:text-sm font-bold">{dice.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-white/80 mb-1.5 text-sm">Modifier (Optional)</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setNewQuickRollModifier(Math.max(-50, newQuickRollModifier - 1))}
+                    className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white font-bold transition-all duration-300 text-lg"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="-50"
+                    max="50"
+                    value={newQuickRollModifier}
+                    onChange={(e) => {
+                      const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
+                      setNewQuickRollModifier(value);
+                    }}
+                    placeholder="0"
+                    className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg p-2.5 text-white text-center font-bold outline-none placeholder-white/40 text-sm sm:text-base"
+                  />
+                  <button
+                    onClick={() => setNewQuickRollModifier(Math.min(50, newQuickRollModifier + 1))}
+                    className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white font-bold transition-all duration-300 text-lg"
+                  >
+                    +
+                  </button>
+                </div>
+                {newQuickRollModifier !== 0 && (
+                  <p className="text-white/60 text-xs mt-1.5 text-center">
+                    {newQuickRollModifier > 0 ? '+' : ''}{newQuickRollModifier} will be added to the total
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={addQuickRoll}
+                className={`w-full backdrop-blur-md rounded-lg p-2.5 sm:p-3 text-base sm:text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(false)}`}
+              >
+                Save {newQuickRollName.trim() || `${newQuickRollCount}d${newQuickRollDice}${newQuickRollModifier !== 0 ? (newQuickRollModifier > 0 ? `+${newQuickRollModifier}` : `${newQuickRollModifier}`) : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -230,45 +355,45 @@ function DiceRoller({ user }) {
       
       <div className="w-full max-w-2xl relative z-10">
         {/* Main Card */}
-        <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 p-8 md:p-12 relative">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-2 text-center relative z-10">
+        <div className="backdrop-blur-xl bg-white/10 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-6 md:p-8 relative">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-1 sm:mb-2 text-center relative z-10">
             D&D Dice Roller
           </h1>
-          <p className="text-forest-200 text-center mb-6 text-lg relative z-10">
+          <p className="text-forest-200 text-center mb-4 sm:mb-6 text-sm sm:text-base md:text-lg relative z-10">
             Roll your fate
           </p>
 
           {/* Quick Roll d20 Buttons */}
-          <div className="mb-8">
-            <label className="block text-white mb-4 text-lg font-semibold text-center">
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
               Quick Roll d20
             </label>
-            <div className="flex justify-center gap-4 flex-wrap">
+            <div className="flex justify-center gap-2 sm:gap-3 flex-wrap">
               <button
                 onClick={() => quickRollD20(1)}
                 disabled={isRolling}
-                className={`backdrop-blur-md rounded-xl px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
+                className={`backdrop-blur-md rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
               >
                 1d20
               </button>
               <button
                 onClick={() => quickRollD20(2)}
                 disabled={isRolling}
-                className={`backdrop-blur-md rounded-xl px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
+                className={`backdrop-blur-md rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
               >
                 2d20
               </button>
               <button
                 onClick={() => quickRollD20(3)}
                 disabled={isRolling}
-                className={`backdrop-blur-md rounded-xl px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
+                className={`backdrop-blur-md rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
               >
                 3d20
               </button>
               <button
                 onClick={() => quickRollD20(6)}
                 disabled={isRolling}
-                className={`backdrop-blur-md rounded-xl px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
+                className={`backdrop-blur-md rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
               >
                 6d20
               </button>
@@ -277,24 +402,24 @@ function DiceRoller({ user }) {
 
           {/* Saved Quick Rolls */}
           {savedQuickRolls.length > 0 && (
-            <div className="mb-8">
-              <label className="block text-white mb-4 text-lg font-semibold text-center">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
                 Saved Quick Rolls
               </label>
-              <div className="flex flex-wrap justify-center gap-3">
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                 {savedQuickRolls.map((roll) => (
                   <div key={roll.id} className="relative group">
                     <button
                       onClick={() => quickRoll(roll.count, roll.diceType, roll.modifier || 0)}
                       disabled={isRolling}
-                      className={`backdrop-blur-md rounded-xl px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
+                      className={`backdrop-blur-md rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
                       title={roll.name !== roll.label ? roll.label : ''}
                     >
                       {roll.name || roll.label}
                     </button>
                     <button
                       onClick={() => handleDeleteClick(roll.id)}
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full backdrop-blur-md bg-red-500/80 hover:bg-red-600 border border-white/30 text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+                      className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full backdrop-blur-md bg-red-500/80 hover:bg-red-600 border border-white/30 text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
                       title="Delete"
                     >
                       ×
@@ -305,177 +430,58 @@ function DiceRoller({ user }) {
             </div>
           )}
 
-          {/* Add Quick Roll Section */}
-          <div className="mb-8">
+          {/* Add Quick Roll Button */}
+          <div className="mb-4 sm:mb-6">
             {!user ? (
               <div className="text-center">
-                <p className="text-white/60 mb-2">Please log in to save quick rolls</p>
+                <p className="text-white/60 text-sm sm:text-base">Please log in to save quick rolls</p>
               </div>
-            ) : !showAddQuickRoll ? (
+            ) : (
               <div className="text-center">
                 <button
                   onClick={() => setShowAddQuickRoll(true)}
-                  className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-6 py-2 text-white font-semibold transition-all duration-300"
+                  className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-4 sm:px-6 py-1.5 sm:py-2 text-white text-sm sm:text-base font-semibold transition-all duration-300"
                 >
                   + Add Quick Roll
                 </button>
-              </div>
-            ) : (
-              <div className="backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block text-white text-lg font-semibold">
-                    Create Quick Roll
-                  </label>
-                    <button
-                      onClick={() => {
-                        setShowAddQuickRoll(false);
-                        setNewQuickRollCount(1);
-                        setNewQuickRollDice(20);
-                        setNewQuickRollName('');
-                        setNewQuickRollModifier(0);
-                      }}
-                      className="text-white/60 hover:text-white text-xl"
-                    >
-                      ×
-                    </button>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-white/80 mb-2 text-sm">Name (Optional)</label>
-                    <input
-                      type="text"
-                      value={newQuickRollName}
-                      onChange={(e) => setNewQuickRollName(e.target.value)}
-                      placeholder={`e.g., "Attack Roll" or "${newQuickRollCount}d${newQuickRollDice}"`}
-                      className="w-full backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-white/40 outline-none focus:border-white/40 transition-colors"
-                      maxLength={30}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2 text-sm">Number of Dice</label>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => setNewQuickRollCount(Math.max(1, newQuickRollCount - 1))}
-                        className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 flex items-center justify-center text-white font-bold transition-all duration-300"
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={newQuickRollCount}
-                        onChange={(e) => {
-                          const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
-                          setNewQuickRollCount(value);
-                        }}
-                        className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-3 text-white text-center font-bold outline-none"
-                      />
-                      <button
-                        onClick={() => setNewQuickRollCount(Math.min(20, newQuickRollCount + 1))}
-                        className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 flex items-center justify-center text-white font-bold transition-all duration-300"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2 text-sm">Dice Type</label>
-                    <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-                      {DICE_TYPES.map((dice) => (
-                        <button
-                          key={dice.value}
-                          onClick={() => setNewQuickRollDice(dice.value)}
-                          className={`backdrop-blur-md rounded-lg p-3 transition-all duration-300 border-2 ${
-                            newQuickRollDice === dice.value
-                              ? `${getSelectedDiceClasses()} text-white shadow-lg scale-105`
-                              : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20 hover:border-white/30'
-                          }`}
-                        >
-                          <div className="text-sm font-bold">{dice.label}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2 text-sm">Modifier (Optional)</label>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => setNewQuickRollModifier(Math.max(-50, newQuickRollModifier - 1))}
-                        className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 flex items-center justify-center text-white font-bold transition-all duration-300"
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        min="-50"
-                        max="50"
-                        value={newQuickRollModifier}
-                        onChange={(e) => {
-                          const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
-                          setNewQuickRollModifier(value);
-                        }}
-                        placeholder="0"
-                        className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-3 text-white text-center font-bold outline-none placeholder-white/40"
-                      />
-                      <button
-                        onClick={() => setNewQuickRollModifier(Math.min(50, newQuickRollModifier + 1))}
-                        className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 flex items-center justify-center text-white font-bold transition-all duration-300"
-                      >
-                        +
-                      </button>
-                    </div>
-                    {newQuickRollModifier !== 0 && (
-                      <p className="text-white/60 text-xs mt-2 text-center">
-                        {newQuickRollModifier > 0 ? '+' : ''}{newQuickRollModifier} will be added to the total
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={addQuickRoll}
-                    className={`w-full backdrop-blur-md rounded-xl p-3 text-lg font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(false)}`}
-                  >
-                    Save {newQuickRollName.trim() || `${newQuickRollCount}d${newQuickRollDice}${newQuickRollModifier !== 0 ? (newQuickRollModifier > 0 ? `+${newQuickRollModifier}` : `${newQuickRollModifier}`) : ''}`}
-                  </button>
-                </div>
               </div>
             )}
           </div>
 
           {/* Dice Type Selection */}
-          <div className="mb-8">
-            <label className="block text-white mb-4 text-lg font-semibold">
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
               Select Dice Type
             </label>
-            <div className="grid grid-cols-4 md:grid-cols-7 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
               {DICE_TYPES.map((dice) => (
                 <button
                   key={dice.value}
                   onClick={() => setSelectedDice(dice.value)}
-                  className={`backdrop-blur-md rounded-xl p-4 transition-all duration-300 border-2 w-20 h-20 flex items-center justify-center ${
+                  className={`backdrop-blur-md rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 transition-all duration-300 border-2 w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 flex items-center justify-center ${
                     selectedDice === dice.value
                       ? `${getSelectedDiceClasses()} text-white shadow-lg scale-105`
                       : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20 hover:border-white/30'
                   }`}
                 >
-                  <div className="text-xl font-bold">{dice.label}</div>
+                  <div className="text-base sm:text-lg md:text-xl font-bold">{dice.label}</div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Modifier Section */}
-          <div className="mb-8">
-            <label className="block text-white mb-4 text-lg font-semibold">
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
               Modifier: {modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : '0'}
             </label>
             {/* Quick Modifier Buttons */}
-            <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
                 <button
                   key={value}
                   onClick={() => setModifier(value)}
-                  className={`backdrop-blur-md rounded-lg px-3 py-2 text-sm font-bold text-white transition-all duration-300 border ${
+                  className={`backdrop-blur-md rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white transition-all duration-300 border ${
                     modifier === value
                       ? `${getSelectedDiceClasses()} shadow-lg scale-105`
                       : 'bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/30'
@@ -485,14 +491,14 @@ function DiceRoller({ user }) {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setModifier(Math.max(-50, modifier - 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-16 h-16 flex items-center justify-center text-white font-bold text-lg transition-all duration-300"
+                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
               >
                 −
               </button>
-              <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-4 text-center">
+              <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 text-center">
                 <input
                   type="number"
                   min="-50"
@@ -502,12 +508,12 @@ function DiceRoller({ user }) {
                     const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
                     setModifier(value);
                   }}
-                  className="w-full bg-transparent text-white text-3xl font-bold text-center outline-none"
+                  className="w-full bg-transparent text-white text-xl sm:text-2xl md:text-3xl font-bold text-center outline-none"
                 />
               </div>
               <button
                 onClick={() => setModifier(Math.min(50, modifier + 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-16 h-16 flex items-center justify-center text-white font-bold text-lg transition-all duration-300"
+                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
               >
                 +
               </button>
@@ -515,18 +521,18 @@ function DiceRoller({ user }) {
           </div>
 
           {/* Dice Count Selection */}
-          <div className="mb-8">
-            <label className="block text-white mb-4 text-lg font-semibold">
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
               Number of Dice: {diceCount}
             </label>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={() => setDiceCount(Math.max(1, diceCount - 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-16 h-16 flex items-center justify-center text-white font-bold text-lg transition-all duration-300"
+                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
               >
                 −
               </button>
-              <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-4 text-center">
+              <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 text-center">
                 <input
                   type="number"
                   min="1"
@@ -536,12 +542,12 @@ function DiceRoller({ user }) {
                     const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
                     setDiceCount(value);
                   }}
-                  className="w-full bg-transparent text-white text-3xl font-bold text-center outline-none"
+                  className="w-full bg-transparent text-white text-xl sm:text-2xl md:text-3xl font-bold text-center outline-none"
                 />
               </div>
               <button
                 onClick={() => setDiceCount(Math.min(20, diceCount + 1))}
-                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-16 h-16 flex items-center justify-center text-white font-bold text-lg transition-all duration-300"
+                className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 flex items-center justify-center text-white font-bold text-base sm:text-lg transition-all duration-300"
               >
                 +
               </button>
@@ -552,34 +558,34 @@ function DiceRoller({ user }) {
           <button
             onClick={() => rollDice(diceCount, selectedDice, modifier)}
             disabled={isRolling}
-            className={`w-full backdrop-blur-md rounded-xl p-6 text-xl font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
+            className={`w-full backdrop-blur-md rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 text-base sm:text-lg md:text-xl font-bold text-white transition-all duration-300 border-2 ${getButtonClasses(isRolling)}`}
           >
             {isRolling ? 'Rolling...' : `Roll ${diceCount}d${selectedDice}${modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : ''}`}
           </button>
 
           {/* Results */}
           {(rolls.length > 0 || total !== null) && !isRolling && (
-            <div className="mt-8 space-y-6">
+            <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
               {/* Individual Rolls */}
               {rolls.length > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-white text-xl font-semibold">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-3 gap-2">
+                    <h2 className="text-white text-base sm:text-lg md:text-xl font-semibold">
                       Individual Rolls
                     </h2>
                     {diceTotal !== null && (
-                      <div className="text-white/80 text-lg font-semibold">
+                      <div className="text-white/80 text-sm sm:text-base md:text-lg font-semibold">
                         Total dice roll = <span className="text-white font-bold">{diceTotal}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
                     {rolls.map((roll, index) => (
                       <div
                         key={index}
-                        className="backdrop-blur-md bg-white/15 border border-white/30 rounded-xl p-4 min-w-[60px] text-center animate-fade-in"
+                        className="backdrop-blur-md bg-white/15 border border-white/30 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 min-w-[50px] sm:min-w-[60px] text-center animate-fade-in"
                       >
-                        <div className="text-2xl font-bold text-white">{roll}</div>
+                        <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">{roll}</div>
                       </div>
                     ))}
                   </div>
@@ -588,16 +594,16 @@ function DiceRoller({ user }) {
 
               {/* Total and Highest */}
               {total !== null && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-2xl p-6 text-center animate-fade-in`}>
-                    <div className="text-white/80 mb-2 text-lg font-semibold">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center animate-fade-in`}>
+                    <div className="text-white/80 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg font-semibold">
                       Total {appliedModifier !== 0 ? `(${appliedModifier > 0 ? '+' : ''}${appliedModifier} modifier)` : ''}
                     </div>
-                    <div className="text-5xl md:text-6xl font-bold text-white">{total}</div>
+                    <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white">{total}</div>
                   </div>
-                  <div className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-2xl p-6 text-center animate-fade-in`}>
-                    <div className="text-white/80 mb-2 text-lg font-semibold">Highest Roll</div>
-                    <div className="text-5xl md:text-6xl font-bold text-white">{highestRoll}</div>
+                  <div className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center animate-fade-in`}>
+                    <div className="text-white/80 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg font-semibold">Highest Roll</div>
+                    <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white">{highestRoll}</div>
                   </div>
                 </div>
               )}
