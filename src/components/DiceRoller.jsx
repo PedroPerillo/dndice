@@ -404,11 +404,24 @@ function DiceRoller({ user }) {
           </div>
 
           {/* Saved Quick Rolls */}
-          {savedQuickRolls.length > 0 && (
-            <div className="mb-4 sm:mb-6">
-              <label className="block text-white mb-2 sm:mb-3 text-base sm:text-lg font-semibold text-center">
+          <div className="mb-4 sm:mb-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <label className="block text-white text-base sm:text-lg font-semibold">
                 Saved Quick Rolls
               </label>
+              {user && (
+                <button
+                  onClick={() => setShowAddQuickRoll(true)}
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xl sm:text-2xl font-bold transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95"
+                  title="Add Quick Roll"
+                >
+                  +
+                </button>
+              )}
+            </div>
+            {!user ? (
+              <p className="text-white/60 text-sm sm:text-base text-center">Please log in to save quick rolls</p>
+            ) : savedQuickRolls.length > 0 ? (
               <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
                 {savedQuickRolls.map((roll) => (
                   <div key={roll.id} className="relative group">
@@ -430,24 +443,8 @@ function DiceRoller({ user }) {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Add Quick Roll Button */}
-          <div className="mb-4 sm:mb-6">
-            {!user ? (
-              <div className="text-center">
-                <p className="text-white/60 text-sm sm:text-base">Please log in to save quick rolls</p>
-              </div>
             ) : (
-              <div className="text-center">
-                <button
-                  onClick={() => setShowAddQuickRoll(true)}
-                  className="backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-4 sm:px-6 py-1.5 sm:py-2 text-white text-sm sm:text-base font-semibold transition-all duration-300"
-                >
-                  + Add Quick Roll
-                </button>
-              </div>
+              <p className="text-white/60 text-sm sm:text-base text-center">No saved quick rolls yet</p>
             )}
           </div>
 
