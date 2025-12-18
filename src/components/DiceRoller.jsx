@@ -51,7 +51,9 @@ function DiceRoller({ user }) {
   const [newQuickRollDice, setNewQuickRollDice] = useState(20);
   const [newQuickRollName, setNewQuickRollName] = useState('');
   const [newQuickRollModifier, setNewQuickRollModifier] = useState(0);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const isInitialMount = useRef(true);
+  const isLoadingQuickRolls = useRef(false);
 
   useEffect(() => {
     // Apply forest theme class on mount
@@ -61,6 +63,8 @@ function DiceRoller({ user }) {
   // Load saved quick rolls and theme from Supabase (if logged in) or cookies (if not)
   useEffect(() => {
     const loadUserData = async () => {
+      isLoadingQuickRolls.current = true;
+      
       if (user) {
         // Load quick rolls from Supabase
         const { data: rollsData, error: rollsError } = await supabase
@@ -89,6 +93,8 @@ function DiceRoller({ user }) {
           setSavedQuickRolls(saved);
         }
       }
+      
+      isLoadingQuickRolls.current = false;
     };
 
     loadUserData();
@@ -96,8 +102,14 @@ function DiceRoller({ user }) {
 
   // Save quick rolls to Supabase (if logged in) or cookies (if not)
   useEffect(() => {
+    // Don't save on initial mount or while loading
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      return;
+    }
+
+    // Don't save if we're currently loading (prevents race condition)
+    if (isLoadingQuickRolls.current) {
       return;
     }
 
@@ -235,6 +247,10 @@ function DiceRoller({ user }) {
     setNewQuickRollModifier(0);
   };
 
+  const handleDeleteClick = (id) => {
+    setDeleteConfirmId(id);
+  };
+
   const deleteQuickRoll = async (id) => {
     if (user) {
       // Delete from Supabase
@@ -247,11 +263,25 @@ function DiceRoller({ user }) {
       if (error) {
         console.error('Error deleting quick roll:', error);
         alert('Failed to delete quick roll. Please try again.');
+        setDeleteConfirmId(null);
         return;
       }
     }
     
-    setSavedQuickRolls(savedQuickRolls.filter(roll => roll.id !== id));
+    // Remove from local state
+    const updatedRolls = savedQuickRolls.filter(roll => roll.id !== id);
+    setSavedQuickRolls(updatedRolls);
+    
+    // Update cookies if not logged in
+    if (!user) {
+      setCookie('dndice_quickrolls', updatedRolls);
+    }
+    
+    setDeleteConfirmId(null);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmId(null);
   };
 
   const getButtonClasses = (isRolling) => {
@@ -271,6 +301,32 @@ function DiceRoller({ user }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 max-w-md mx-4 shadow-2xl">
+            <h3 className="text-white text-xl font-bold mb-4">Delete Quick Roll?</h3>
+            <p className="text-white/80 mb-6">
+              Are you sure you want to delete this quick roll? This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={cancelDelete}
+                className="flex-1 backdrop-blur-md bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg px-4 py-2 text-white font-semibold transition-all duration-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteQuickRoll(deleteConfirmId)}
+                className="flex-1 backdrop-blur-md bg-red-600/50 hover:bg-red-600/70 border border-red-400 rounded-lg px-4 py-2 text-white font-semibold transition-all duration-300"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Effects - Leaves */}
       <div className="leaf" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
       <div className="leaf" style={{ top: '20%', left: '80%', animationDelay: '0.5s' }}></div>
@@ -348,7 +404,7 @@ function DiceRoller({ user }) {
                       {roll.name || roll.label}
                     </button>
                     <button
-                      onClick={() => deleteQuickRoll(roll.id)}
+                      onClick={() => handleDeleteClick(roll.id)}
                       className="absolute -top-2 -right-2 w-6 h-6 rounded-full backdrop-blur-md bg-red-500/80 hover:bg-red-600 border border-white/30 text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
                       title="Delete"
                     >
