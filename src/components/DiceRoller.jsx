@@ -43,8 +43,7 @@ function DiceRoller({ user }) {
   const isLoadingQuickRolls = useRef(false);
 
   useEffect(() => {
-    // Apply forest theme class on mount
-    document.body.className = 'theme-forest';
+    // Theme is now applied via CSS
   }, []);
 
   // Load saved quick rolls from Supabase (only when logged in)
@@ -175,17 +174,17 @@ function DiceRoller({ user }) {
 
   const getButtonClasses = (isRolling) => {
     if (isRolling) {
-      return 'bg-forest-800/50 border-forest-600 cursor-not-allowed';
+      return 'bg-orange-800/50 border-orange-600 cursor-not-allowed';
     }
-    return 'bg-forest-600/50 border-forest-400 hover:bg-forest-500/60 hover:scale-105 hover:shadow-xl active:scale-95';
+    return 'bg-orange-600/50 border-orange-400 hover:bg-orange-500/60 hover:scale-105 hover:shadow-xl active:scale-95';
   };
 
   const getSelectedDiceClasses = () => {
-    return 'bg-forest-600/50 border-forest-400';
+    return 'bg-orange-600/50 border-orange-400';
   };
 
   const getTotalClasses = () => {
-    return 'bg-forest-600/40 border-forest-400/50';
+    return 'bg-orange-600/40 border-orange-400/50';
   };
 
   const closeAddQuickRollModal = () => {
@@ -345,17 +344,6 @@ function DiceRoller({ user }) {
         </div>
       )}
 
-      {/* Floating Effects - Leaves */}
-      <div className="leaf" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
-      <div className="leaf" style={{ top: '20%', left: '80%', animationDelay: '0.5s' }}></div>
-      <div className="leaf" style={{ top: '60%', left: '10%', animationDelay: '1s' }}></div>
-      <div className="leaf" style={{ top: '80%', left: '70%', animationDelay: '1.5s' }}></div>
-      <div className="leaf" style={{ top: '40%', left: '50%', animationDelay: '2s' }}></div>
-      <div className="leaf" style={{ top: '30%', left: '25%', animationDelay: '2.5s' }}></div>
-      <div className="leaf" style={{ top: '15%', left: '60%', animationDelay: '0.8s' }}></div>
-      <div className="leaf" style={{ top: '70%', left: '40%', animationDelay: '1.2s' }}></div>
-      <div className="leaf" style={{ top: '50%', left: '85%', animationDelay: '1.8s' }}></div>
-      <div className="leaf" style={{ top: '25%', left: '5%', animationDelay: '2.2s' }}></div>
       
       <div className="w-full max-w-2xl relative z-10">
         {/* Main Card */}
@@ -363,7 +351,7 @@ function DiceRoller({ user }) {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-1 sm:mb-2 text-center relative z-10">
             D&D Dice Roller
           </h1>
-          <p className="text-forest-200 text-center mb-4 sm:mb-6 text-sm sm:text-base md:text-lg relative z-10">
+          <p className="text-gray-300 text-center mb-4 sm:mb-6 text-sm sm:text-base md:text-lg relative z-10">
             Roll your fate
           </p>
 
@@ -628,7 +616,7 @@ function DiceRoller({ user }) {
                     disabled={rolls.length === 0}
                     className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center animate-fade-in transition-all duration-300 ${
                       rolls.length > 0 
-                        ? 'hover:bg-forest-500/60 hover:scale-105 hover:shadow-xl cursor-pointer' 
+                        ? 'hover:bg-orange-500/60 hover:scale-105 hover:shadow-xl cursor-pointer' 
                         : 'cursor-default'
                     }`}
                     title={rolls.length > 0 ? 'Click to view individual rolls' : ''}
