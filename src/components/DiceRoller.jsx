@@ -45,8 +45,6 @@ function DiceRoller({ user }) {
   const [appliedModifier, setAppliedModifier] = useState(0);
   const [highestRoll, setHighestRoll] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
-  const [theme, setTheme] = useState('forest');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [savedQuickRolls, setSavedQuickRolls] = useState([]);
   const [showAddQuickRoll, setShowAddQuickRoll] = useState(false);
   const [newQuickRollCount, setNewQuickRollCount] = useState(1);
@@ -55,31 +53,26 @@ function DiceRoller({ user }) {
   const [newQuickRollModifier, setNewQuickRollModifier] = useState(0);
   const isInitialMount = useRef(true);
 
-  const themes = [
-    { id: 'forest', name: 'Forest Green', icon: '🌲' },
-    { id: 'pink', name: 'Pink Sparkles', icon: '🌸' },
-  ];
-
   useEffect(() => {
-    // Apply theme class immediately on mount and when theme changes
-    document.body.className = `theme-${theme}`;
-  }, [theme]);
+    // Apply forest theme class on mount
+    document.body.className = 'theme-forest';
+  }, []);
 
-  // Load saved quick rolls from Supabase (if logged in) or cookies (if not)
+  // Load saved quick rolls and theme from Supabase (if logged in) or cookies (if not)
   useEffect(() => {
-    const loadQuickRolls = async () => {
+    const loadUserData = async () => {
       if (user) {
-        // Load from Supabase
-        const { data, error } = await supabase
+        // Load quick rolls from Supabase
+        const { data: rollsData, error: rollsError } = await supabase
           .from('quick_rolls')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error loading quick rolls:', error);
-        } else if (data) {
-          setSavedQuickRolls(data.map(roll => ({
+        if (rollsError) {
+          console.error('Error loading quick rolls:', rollsError);
+        } else if (rollsData) {
+          setSavedQuickRolls(rollsData.map(roll => ({
             id: roll.id,
             count: roll.count,
             diceType: roll.dice_type,
@@ -88,6 +81,7 @@ function DiceRoller({ user }) {
             name: roll.name,
           })));
         }
+
       } else {
         // Fallback to cookies if not logged in
         const saved = getCookie('dndice_quickrolls');
@@ -97,7 +91,7 @@ function DiceRoller({ user }) {
       }
     };
 
-    loadQuickRolls();
+    loadUserData();
   }, [user]);
 
   // Save quick rolls to Supabase (if logged in) or cookies (if not)
@@ -142,22 +136,6 @@ function DiceRoller({ user }) {
     saveQuickRolls();
   }, [savedQuickRolls, user]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isDropdownOpen && !event.target.closest('.theme-dropdown')) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isDropdownOpen]);
-
-  const selectTheme = (themeId) => {
-    setTheme(themeId);
-    setIsDropdownOpen(false);
-  };
-
-  const currentTheme = themes.find(t => t.id === theme) || themes[0];
 
   const rollDice = (count = diceCount, diceType = selectedDice, rollModifier = null) => {
     setIsRolling(true);
@@ -278,96 +256,32 @@ function DiceRoller({ user }) {
 
   const getButtonClasses = (isRolling) => {
     if (isRolling) {
-      return theme === 'pink' 
-        ? 'bg-pink-800/50 border-pink-600 cursor-not-allowed'
-        : 'bg-forest-800/50 border-forest-600 cursor-not-allowed';
+      return 'bg-forest-800/50 border-forest-600 cursor-not-allowed';
     }
-    return theme === 'pink'
-      ? 'bg-pink-600/50 border-pink-400 hover:bg-pink-500/60 hover:scale-105 hover:shadow-xl active:scale-95'
-      : 'bg-forest-600/50 border-forest-400 hover:bg-forest-500/60 hover:scale-105 hover:shadow-xl active:scale-95';
+    return 'bg-forest-600/50 border-forest-400 hover:bg-forest-500/60 hover:scale-105 hover:shadow-xl active:scale-95';
   };
 
   const getSelectedDiceClasses = () => {
-    return theme === 'pink'
-      ? 'bg-pink-600/50 border-pink-400'
-      : 'bg-forest-600/50 border-forest-400';
+    return 'bg-forest-600/50 border-forest-400';
   };
 
   const getTotalClasses = () => {
-    return theme === 'pink'
-      ? 'bg-pink-600/40 border-pink-400/50'
-      : 'bg-forest-600/40 border-forest-400/50';
+    return 'bg-forest-600/40 border-forest-400/50';
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-      {/* Theme Dropdown */}
-      <div className="fixed top-4 right-4 z-50 theme-dropdown">
-        <button
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30 rounded-lg px-4 py-2 text-white font-semibold transition-all duration-300 hover:scale-105 shadow-lg flex items-center gap-2"
-        >
-          <span>{currentTheme.icon}</span>
-          <span className="hidden sm:inline">{currentTheme.name}</span>
-          <svg
-            className={`w-4 h-4 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        
-        {isDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-48 backdrop-blur-md bg-white/20 border border-white/30 rounded-lg shadow-xl overflow-hidden">
-            {themes.map((themeOption) => (
-              <button
-                key={themeOption.id}
-                onClick={() => selectTheme(themeOption.id)}
-                className={`w-full px-4 py-3 text-left text-white hover:bg-white/20 transition-colors duration-200 flex items-center gap-3 ${
-                  theme === themeOption.id ? 'bg-white/10 font-semibold' : ''
-                }`}
-              >
-                <span className="text-xl">{themeOption.icon}</span>
-                <span>{themeOption.name}</span>
-                {theme === themeOption.id && (
-                  <span className="ml-auto">✓</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Effects - Sparkles for Pink, Leaves for Forest */}
-      {theme === 'pink' ? (
-        <>
-          <div className="sparkle" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
-          <div className="sparkle" style={{ top: '20%', left: '80%', animationDelay: '0.5s' }}></div>
-          <div className="sparkle" style={{ top: '60%', left: '10%', animationDelay: '1s' }}></div>
-          <div className="sparkle" style={{ top: '80%', left: '70%', animationDelay: '1.5s' }}></div>
-          <div className="sparkle" style={{ top: '40%', left: '50%', animationDelay: '2s' }}></div>
-          <div className="sparkle" style={{ top: '30%', left: '25%', animationDelay: '2.5s' }}></div>
-          <div className="sparkle" style={{ top: '15%', left: '60%', animationDelay: '0.8s' }}></div>
-          <div className="sparkle" style={{ top: '70%', left: '40%', animationDelay: '1.2s' }}></div>
-          <div className="sparkle" style={{ top: '50%', left: '85%', animationDelay: '1.8s' }}></div>
-          <div className="sparkle" style={{ top: '25%', left: '5%', animationDelay: '2.2s' }}></div>
-        </>
-      ) : (
-        <>
-          <div className="leaf" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
-          <div className="leaf" style={{ top: '20%', left: '80%', animationDelay: '0.5s' }}></div>
-          <div className="leaf" style={{ top: '60%', left: '10%', animationDelay: '1s' }}></div>
-          <div className="leaf" style={{ top: '80%', left: '70%', animationDelay: '1.5s' }}></div>
-          <div className="leaf" style={{ top: '40%', left: '50%', animationDelay: '2s' }}></div>
-          <div className="leaf" style={{ top: '30%', left: '25%', animationDelay: '2.5s' }}></div>
-          <div className="leaf" style={{ top: '15%', left: '60%', animationDelay: '0.8s' }}></div>
-          <div className="leaf" style={{ top: '70%', left: '40%', animationDelay: '1.2s' }}></div>
-          <div className="leaf" style={{ top: '50%', left: '85%', animationDelay: '1.8s' }}></div>
-          <div className="leaf" style={{ top: '25%', left: '5%', animationDelay: '2.2s' }}></div>
-        </>
-      )}
+      {/* Floating Effects - Leaves */}
+      <div className="leaf" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
+      <div className="leaf" style={{ top: '20%', left: '80%', animationDelay: '0.5s' }}></div>
+      <div className="leaf" style={{ top: '60%', left: '10%', animationDelay: '1s' }}></div>
+      <div className="leaf" style={{ top: '80%', left: '70%', animationDelay: '1.5s' }}></div>
+      <div className="leaf" style={{ top: '40%', left: '50%', animationDelay: '2s' }}></div>
+      <div className="leaf" style={{ top: '30%', left: '25%', animationDelay: '2.5s' }}></div>
+      <div className="leaf" style={{ top: '15%', left: '60%', animationDelay: '0.8s' }}></div>
+      <div className="leaf" style={{ top: '70%', left: '40%', animationDelay: '1.2s' }}></div>
+      <div className="leaf" style={{ top: '50%', left: '85%', animationDelay: '1.8s' }}></div>
+      <div className="leaf" style={{ top: '25%', left: '5%', animationDelay: '2.2s' }}></div>
       
       <div className="w-full max-w-2xl relative z-10">
         {/* Main Card */}
@@ -375,7 +289,7 @@ function DiceRoller({ user }) {
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-2 text-center relative z-10">
             D&D Dice Roller
           </h1>
-          <p className={`${theme === 'pink' ? 'text-pink-200' : 'text-forest-200'} text-center mb-6 text-lg relative z-10`}>
+          <p className="text-forest-200 text-center mb-6 text-lg relative z-10">
             Roll your fate
           </p>
 

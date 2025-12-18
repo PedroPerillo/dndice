@@ -10,38 +10,6 @@
     overflow-x: hidden;
   }
   
-  body.theme-pink {
-    @apply bg-gradient-to-br from-pink-950 via-pink-900 to-pink-950;
-  }
-  
-  body.theme-forest {
-    @apply bg-gradient-to-br from-forest-950 via-forest-900 to-forest-950;
-  }
-  
-  body.theme-pink::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-      radial-gradient(2px 2px at 20% 30%, white, transparent),
-      radial-gradient(2px 2px at 60% 70%, white, transparent),
-      radial-gradient(1px 1px at 50% 50%, white, transparent),
-      radial-gradient(1px 1px at 80% 10%, white, transparent),
-      radial-gradient(2px 2px at 90% 60%, white, transparent),
-      radial-gradient(1px 1px at 33% 80%, white, transparent),
-      radial-gradient(2px 2px at 10% 90%, white, transparent),
-      radial-gradient(1px 1px at 70% 20%, white, transparent);
-    background-repeat: repeat;
-    background-size: 200px 200px;
-    animation: sparkle 20s linear infinite;
-    pointer-events: none;
-    opacity: 0.6;
-    z-index: 0;
-  }
-  
   body.theme-forest::before {
     content: '';
     position: fixed;
@@ -64,15 +32,6 @@
   }
 }
 
-@keyframes sparkle {
-  0% {
-    transform: translateY(0) translateX(0);
-  }
-  100% {
-    transform: translateY(-200px) translateX(200px);
-  }
-}
-
 @keyframes woodGrain {
   0% {
     background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
@@ -80,51 +39,6 @@
   100% {
     background-position: 200px 200px, -200px -200px, 100px 100px, -100px -100px, 50px 50px;
   }
-}
-
-.sparkle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: white;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: sparkleFloat 3s ease-in-out infinite;
-  box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.8);
-}
-
-@keyframes sparkleFloat {
-  0%, 100% {
-    opacity: 0;
-    transform: translateY(0) scale(0) rotate(0deg);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-30px) scale(1.5) rotate(180deg);
-  }
-}
-
-.sparkle::before,
-.sparkle::after {
-  content: '';
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 0 4px 1px rgba(255, 255, 255, 0.9);
-}
-
-.sparkle::before {
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.sparkle::after {
-  bottom: -8px;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .leaf {
