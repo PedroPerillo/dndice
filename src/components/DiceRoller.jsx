@@ -38,6 +38,7 @@ function DiceRoller({ user }) {
   const [isDiceTypeExpanded, setIsDiceTypeExpanded] = useState(false);
   const [isModifierExpanded, setIsModifierExpanded] = useState(false);
   const [isDiceCountExpanded, setIsDiceCountExpanded] = useState(false);
+  const [showIndividualRollsModal, setShowIndividualRollsModal] = useState(false);
   const isInitialMount = useRef(true);
   const isLoadingQuickRolls = useRef(false);
 
@@ -619,47 +620,76 @@ function DiceRoller({ user }) {
           {/* Results */}
           {(rolls.length > 0 || total !== null) && !isRolling && (
             <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
-              {/* Individual Rolls */}
-              {rolls.length > 0 && (
-                <div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-3 gap-2">
-                    <h2 className="text-white text-base sm:text-lg md:text-xl font-semibold">
-                      Individual Rolls
-                    </h2>
-                    {diceTotal !== null && (
-                      <div className="text-white/80 text-sm sm:text-base md:text-lg font-semibold">
-                        Total dice roll = <span className="text-white font-bold">{diceTotal}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2 sm:gap-3">
-                    {rolls.map((roll, index) => (
-                      <div
-                        key={index}
-                        className="backdrop-blur-md bg-white/15 border border-white/30 rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 min-w-[50px] sm:min-w-[60px] text-center animate-fade-in"
-                      >
-                        <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">{roll}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Total and Highest */}
               {total !== null && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center animate-fade-in`}>
+                  <button
+                    onClick={() => rolls.length > 0 && setShowIndividualRollsModal(true)}
+                    disabled={rolls.length === 0}
+                    className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center animate-fade-in transition-all duration-300 ${
+                      rolls.length > 0 
+                        ? 'hover:bg-forest-500/60 hover:scale-105 hover:shadow-xl cursor-pointer' 
+                        : 'cursor-default'
+                    }`}
+                    title={rolls.length > 0 ? 'Click to view individual rolls' : ''}
+                  >
                     <div className="text-white/80 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg font-semibold">
                       Total {appliedModifier !== 0 ? `(${appliedModifier > 0 ? '+' : ''}${appliedModifier} modifier)` : ''}
                     </div>
                     <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white">{total}</div>
-                  </div>
+                    {rolls.length > 0 && (
+                      <div className="text-white/60 text-xs sm:text-sm mt-2">
+                        {rolls.length} roll{rolls.length !== 1 ? 's' : ''} • Click to view
+                      </div>
+                    )}
+                  </button>
                   <div className={`backdrop-blur-xl ${getTotalClasses()} border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center animate-fade-in`}>
                     <div className="text-white/80 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg font-semibold">Highest Roll</div>
                     <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white">{highestRoll}</div>
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Individual Rolls Modal */}
+          {showIndividualRollsModal && rolls.length > 0 && (
+            <div 
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => setShowIndividualRollsModal(false)}
+            >
+              <div 
+                className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-white text-xl sm:text-2xl font-bold">
+                    Individual Rolls
+                  </h2>
+                  <button
+                    onClick={() => setShowIndividualRollsModal(false)}
+                    className="text-white/60 hover:text-white text-2xl leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="mb-4">
+                  <div className="text-white/80 text-sm sm:text-base font-semibold text-center">
+                    Total dice roll = <span className="text-white font-bold text-lg sm:text-xl">{diceTotal}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                  {rolls.map((roll, index) => (
+                    <div
+                      key={index}
+                      className="backdrop-blur-md bg-white/15 border border-white/30 rounded-xl p-4 sm:p-5 min-w-[70px] sm:min-w-[80px] text-center"
+                    >
+                      <div className="text-white/60 text-xs sm:text-sm mb-1">Roll {index + 1}</div>
+                      <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">{roll}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
