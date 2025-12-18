@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import {
+  createQuickRoll,
+  getQuickRolls,
+  updateQuickRoll,
+  deleteQuickRoll as deleteQuickRollService,
+} from '../services/quickRollsService';
+import '../utils/debugSupabase'; // Load debug utility
 
 const DICE_TYPES = [
   { value: 4, label: 'd4' },
@@ -46,32 +53,13 @@ function DiceRoller({ user }) {
 
       isLoadingQuickRolls.current = true;
       
-      // Load quick rolls from Supabase
-      const { data: rollsData, error: rollsError } = await supabase
-        .from('quick_rolls')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (rollsError) {
-        console.error('Error loading quick rolls:', rollsError);
-        console.error('User ID:', user.id);
-        alert(`Failed to load quick rolls: ${rollsError.message}. Please check the browser console.`);
-      } else {
-        console.log('Loaded quick rolls:', rollsData);
-        if (rollsData && rollsData.length > 0) {
-          setSavedQuickRolls(rollsData.map(roll => ({
-            id: roll.id,
-            count: roll.count,
-            diceType: roll.dice_type,
-            modifier: roll.modifier || 0,
-            label: `${roll.count}d${roll.dice_type}${roll.modifier ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`,
-            name: roll.name,
-          })));
-        } else {
-          console.log('No quick rolls found for user:', user.id);
-          setSavedQuickRolls([]);
-        }
+      try {
+        const rolls = await getQuickRolls(user.id);
+        setSavedQuickRolls(rolls);
+      } catch (error) {
+        console.error('Failed to load quick rolls:', error);
+        alert(`Failed to load quick rolls: ${error.message}. Please check the browser console.`);
+        setSavedQuickRolls([]);
       }
       
       isLoadingQuickRolls.current = false;
@@ -137,49 +125,25 @@ function DiceRoller({ user }) {
 
     const name = newQuickRollName.trim() || `${newQuickRollCount}d${newQuickRollDice}`;
     const modifier = parseInt(newQuickRollModifier) || 0;
-    const modifierText = modifier !== 0 ? (modifier > 0 ? `+${modifier}` : `${modifier}`) : '';
-    
-    // Save to Supabase
-    const rollData = {
-      user_id: user.id,
-      name: name,
-      count: newQuickRollCount,
-      dice_type: newQuickRollDice,
-      modifier: modifier,
-    };
 
-    console.log('Saving quick roll:', rollData);
+    try {
+      const newRoll = await createQuickRoll(user.id, {
+        name: name,
+        count: newQuickRollCount,
+        diceType: newQuickRollDice,
+        modifier: modifier,
+      });
 
-    const { data, error } = await supabase
-      .from('quick_rolls')
-      .insert(rollData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding quick roll:', error);
-      console.error('Roll data attempted:', rollData);
-      alert(`Failed to save quick roll: ${error.message}. Please check the browser console and try again.`);
-      return;
+      setSavedQuickRolls([...savedQuickRolls, newRoll]);
+      setShowAddQuickRoll(false);
+      setNewQuickRollCount(1);
+      setNewQuickRollDice(20);
+      setNewQuickRollName('');
+      setNewQuickRollModifier(0);
+    } catch (error) {
+      alert(`Failed to save quick roll: ${error.message}`);
+      console.error('Add quick roll error:', error);
     }
-
-    console.log('Successfully saved quick roll:', data);
-
-    const newRoll = {
-      id: data.id,
-      count: data.count,
-      diceType: data.dice_type,
-      modifier: data.modifier || 0,
-      label: `${data.count}d${data.dice_type}${modifierText}`,
-      name: data.name,
-    };
-    setSavedQuickRolls([...savedQuickRolls, newRoll]);
-
-    setShowAddQuickRoll(false);
-    setNewQuickRollCount(1);
-    setNewQuickRollDice(20);
-    setNewQuickRollName('');
-    setNewQuickRollModifier(0);
   };
 
   const handleDeleteClick = (id) => {
@@ -193,23 +157,16 @@ function DiceRoller({ user }) {
       return;
     }
 
-    // Delete from Supabase
-    const { error } = await supabase
-      .from('quick_rolls')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error deleting quick roll:', error);
-      alert(`Failed to delete quick roll: ${error.message}. Please try again.`);
+    try {
+      await deleteQuickRollService(user.id, id);
+      // Remove from local state
+      setSavedQuickRolls(savedQuickRolls.filter(roll => roll.id !== id));
       setDeleteConfirmId(null);
-      return;
+    } catch (error) {
+      alert(`Failed to delete quick roll: ${error.message}`);
+      console.error('Delete quick roll error:', error);
+      setDeleteConfirmId(null);
     }
-    
-    // Remove from local state
-    setSavedQuickRolls(savedQuickRolls.filter(roll => roll.id !== id));
-    setDeleteConfirmId(null);
   };
 
   const cancelDelete = () => {
