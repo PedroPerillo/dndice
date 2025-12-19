@@ -22,28 +22,16 @@ export const supabase = isSupabaseConfigured
         signOut: () => Promise.resolve({ error: null }),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
       },
-      from: (table) => {
-        console.warn(`⚠️ Supabase not configured. Mock client used for table: ${table}`);
-        return {
-          select: () => ({
-            eq: () => ({
-              order: () => Promise.resolve({ data: [], error: { message: 'Supabase not configured' } }),
-            }),
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            order: () => Promise.resolve({ data: [], error: null }),
           }),
-          insert: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-          update: () => ({
-            eq: () => ({
-              eq: () => ({
-                select: () => ({
-                  single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-                }),
-              }),
-            }),
-          }),
-          delete: () => ({
-            eq: () => Promise.resolve({ error: { message: 'Supabase not configured' } }),
-          }),
-        };
-      },
+        }),
+        insert: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+        delete: () => ({
+          eq: () => Promise.resolve({ error: null }),
+        }),
+      }),
     };
 
