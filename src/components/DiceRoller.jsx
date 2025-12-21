@@ -5,7 +5,11 @@ import { supabase } from '../lib/supabase';
 const setCookie = (name, value, days = 365) => {
   const expires = new Date();
   expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${JSON.stringify(value)};expires=${expires.toUTCString()};path=/`;
+  // Cookies should be URI-encoded; JSON contains characters that can be invalid in cookie values.
+  // Also set SameSite to reduce cross-site leakage; add Secure when served over HTTPS.
+  const encoded = encodeURIComponent(JSON.stringify(value));
+  const secure = window.location?.protocol === 'https:' ? ';Secure' : '';
+  document.cookie = `${name}=${encoded};expires=${expires.toUTCString()};path=/;SameSite=Lax${secure}`;
 };
 
 const getCookie = (name) => {
@@ -16,14 +20,20 @@ const getCookie = (name) => {
     while (c.charAt(0) === ' ') c = c.substring(1, c.length);
     if (c.indexOf(nameEQ) === 0) {
       try {
-        return JSON.parse(c.substring(nameEQ.length, c.length));
-      } catch (e) {
+        const raw = c.substring(nameEQ.length, c.length);
+        const decoded = decodeURIComponent(raw);
+        return JSON.parse(decoded);
+      } catch {
         return null;
       }
     }
   }
   return null;
 };
+
+// Keep non-deterministic work out of the component body to satisfy the
+// react-hooks/purity lint rule, while still only invoking it from event handlers.
+const rollSingleDie = (sides) => Math.floor(Math.random() * sides) + 1;
 
 const DICE_TYPES = [
   { value: 4, label: 'd4' },
@@ -54,6 +64,7 @@ function DiceRoller({ user }) {
   const [newQuickRollName, setNewQuickRollName] = useState('');
   const [newQuickRollModifier, setNewQuickRollModifier] = useState(0);
   const isInitialMount = useRef(true);
+  const appliedThemeClassRef = useRef(null);
 
   const themes = [
     { id: 'forest', name: 'Forest Green', icon: '🌲' },
@@ -61,13 +72,33 @@ function DiceRoller({ user }) {
   ];
 
   useEffect(() => {
-    // Apply theme class immediately on mount and when theme changes
-    document.body.className = `theme-${theme}`;
+    // Apply theme class without clobbering any existing <body> classes.
+    // (Overwriting body.className can break other global styling/behaviour.)
+    const prev = appliedThemeClassRef.current;
+    if (prev) document.body.classList.remove(prev);
+
+    const next = `theme-${theme}`;
+    // Clean up any stale theme-* classes from previous versions.
+    for (const cls of Array.from(document.body.classList)) {
+      if (cls.startsWith('theme-') && cls !== next) document.body.classList.remove(cls);
+    }
+    document.body.classList.add(next);
+    appliedThemeClassRef.current = next;
+
+    return () => {
+      document.body.classList.remove(next);
+      if (appliedThemeClassRef.current === next) appliedThemeClassRef.current = null;
+    };
   }, [theme]);
 
   // Load saved quick rolls from Supabase (if logged in) or cookies (if not)
   useEffect(() => {
-    const loadQuickRolls = async () => {
+    let cancelled = false;
+    const safeSetSavedQuickRolls = (next) => {
+      if (!cancelled) setSavedQuickRolls(next);
+    };
+
+    (async () => {
       if (user) {
         // Load from Supabase
         const { data, error } = await supabase
@@ -78,68 +109,46 @@ function DiceRoller({ user }) {
 
         if (error) {
           console.error('Error loading quick rolls:', error);
-        } else if (data) {
-          setSavedQuickRolls(data.map(roll => ({
-            id: roll.id,
-            count: roll.count,
-            diceType: roll.dice_type,
-            modifier: roll.modifier || 0,
-            label: `${roll.count}d${roll.dice_type}${roll.modifier ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}`,
-            name: roll.name,
-          })));
+          return;
+        }
+        if (data) {
+          safeSetSavedQuickRolls(
+            data.map((roll) => ({
+              id: roll.id,
+              count: roll.count,
+              diceType: roll.dice_type,
+              modifier: roll.modifier || 0,
+              label: `${roll.count}d${roll.dice_type}${
+                roll.modifier ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''
+              }`,
+              name: roll.name,
+            }))
+          );
         }
       } else {
         // Fallback to cookies if not logged in
         const saved = getCookie('dndice_quickrolls');
-        if (saved && Array.isArray(saved)) {
-          setSavedQuickRolls(saved);
-        }
+        if (saved && Array.isArray(saved)) safeSetSavedQuickRolls(saved);
       }
-    };
+    })().catch((error) => {
+      console.error('Error loading quick rolls:', error);
+    });
 
-    loadQuickRolls();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
-  // Save quick rolls to Supabase (if logged in) or cookies (if not)
+  // Save quick rolls to cookies for guests.
+  // For authenticated users, we persist explicitly in add/delete flows rather than re-syncing
+  // (the previous "delete all then re-insert everything" approach was slow and could lose data).
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    const saveQuickRolls = async () => {
-      if (user) {
-        // Delete all existing quick rolls for this user
-        await supabase
-          .from('quick_rolls')
-          .delete()
-          .eq('user_id', user.id);
-
-        // Insert new quick rolls
-        if (savedQuickRolls.length > 0) {
-          const rollsToInsert = savedQuickRolls.map(roll => ({
-            user_id: user.id,
-            name: roll.name,
-            count: roll.count,
-            dice_type: roll.diceType,
-            modifier: roll.modifier || 0,
-          }));
-
-          const { error } = await supabase
-            .from('quick_rolls')
-            .insert(rollsToInsert);
-
-          if (error) {
-            console.error('Error saving quick rolls:', error);
-          }
-        }
-      } else {
-        // Fallback to cookies if not logged in
-        setCookie('dndice_quickrolls', savedQuickRolls);
-      }
-    };
-
-    saveQuickRolls();
+    if (!user) setCookie('dndice_quickrolls', savedQuickRolls);
   }, [savedQuickRolls, user]);
 
   useEffect(() => {
@@ -169,7 +178,7 @@ function DiceRoller({ user }) {
     const appliedModifier = rollModifier !== null ? rollModifier : modifier;
 
     for (let i = 0; i < count; i++) {
-      const roll = Math.floor(Math.random() * diceType) + 1;
+      const roll = rollSingleDie(diceType);
       newRolls.push(roll);
       sum += roll;
       if (roll > highest) {
