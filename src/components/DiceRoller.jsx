@@ -35,6 +35,68 @@ const getCookie = (name) => {
 // react-hooks/purity lint rule, while still only invoking it from event handlers.
 const rollSingleDie = (sides) => Math.floor(Math.random() * sides) + 1;
 
+const VALID_THEMES = ['forest', 'pink'];
+const DEFAULT_THEME = 'forest';
+const THEME_COOKIE = 'dndice_theme';
+
+// Controlled number input that buffers the raw string so users can clear the
+// field or start typing a negative number ("-") without it being instantly
+// reset to 0/the min. The numeric value reported to `onChange` is always
+// clamped to [min, max]. On blur, an invalid/empty value snaps back to the
+// last valid numeric value.
+function ClampedNumberInput({ value, onChange, min, max, className, placeholder, ...rest }) {
+  // React's recommended pattern for syncing a prop to state: track the last
+  // observed prop with a state and reset the derived state during render when
+  // the prop changes (see https://react.dev/learn/you-might-not-need-an-effect).
+  const [draft, setDraft] = useState(String(value));
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    setDraft(String(value));
+  }
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    setDraft(raw);
+    if (raw === '' || raw === '-') return;
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) return;
+    const clamped = Math.max(min, Math.min(max, parsed));
+    if (clamped !== value) {
+      setLastValue(clamped);
+      onChange(clamped);
+    }
+  };
+
+  const handleBlur = () => {
+    const parsed = parseInt(draft, 10);
+    if (Number.isNaN(parsed)) {
+      setDraft(String(value));
+      return;
+    }
+    const clamped = Math.max(min, Math.min(max, parsed));
+    setDraft(String(clamped));
+    if (clamped !== value) {
+      setLastValue(clamped);
+      onChange(clamped);
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      value={draft}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+      placeholder={placeholder}
+      {...rest}
+    />
+  );
+}
+
 const DICE_TYPES = [
   { value: 4, label: 'd4' },
   { value: 6, label: 'd6' },
@@ -55,7 +117,10 @@ function DiceRoller({ user }) {
   const [appliedModifier, setAppliedModifier] = useState(0);
   const [highestRoll, setHighestRoll] = useState(null);
   const [isRolling, setIsRolling] = useState(false);
-  const [theme, setTheme] = useState('forest');
+  const [theme, setTheme] = useState(() => {
+    const saved = getCookie(THEME_COOKIE);
+    return typeof saved === 'string' && VALID_THEMES.includes(saved) ? saved : DEFAULT_THEME;
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [savedQuickRolls, setSavedQuickRolls] = useState([]);
   const [showAddQuickRoll, setShowAddQuickRoll] = useState(false);
@@ -65,6 +130,10 @@ function DiceRoller({ user }) {
   const [newQuickRollModifier, setNewQuickRollModifier] = useState(0);
   const isInitialMount = useRef(true);
   const appliedThemeClassRef = useRef(null);
+  const isInitialThemeMount = useRef(true);
+  // Tracks the theme value most recently loaded from a remote source so we don't
+  // immediately echo it back as a write.
+  const remoteSyncedThemeRef = useRef(null);
 
   const themes = [
     { id: 'forest', name: 'Forest Green', icon: '🌲' },
@@ -90,6 +159,74 @@ function DiceRoller({ user }) {
       if (appliedThemeClassRef.current === next) appliedThemeClassRef.current = null;
     };
   }, [theme]);
+
+  // Load the persisted theme for logged-in users from Supabase user_preferences.
+  // Guests already have their theme restored from the cookie via the lazy initial state.
+  useEffect(() => {
+    if (!user) {
+      remoteSyncedThemeRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('theme')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error) {
+        console.error('Error loading user preferences:', error);
+        return;
+      }
+      const remoteTheme = data?.theme;
+      if (typeof remoteTheme === 'string' && VALID_THEMES.includes(remoteTheme)) {
+        remoteSyncedThemeRef.current = remoteTheme;
+        setTheme(remoteTheme);
+      }
+    })().catch((error) => {
+      console.error('Error loading user preferences:', error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  // Persist theme: always to cookie, and to Supabase for logged-in users.
+  useEffect(() => {
+    if (isInitialThemeMount.current) {
+      isInitialThemeMount.current = false;
+      // Still write the cookie on first mount so the initial default ends up persisted.
+      setCookie(THEME_COOKIE, theme);
+      return;
+    }
+
+    setCookie(THEME_COOKIE, theme);
+
+    if (!user) return;
+    // Avoid writing back the value we just loaded from the server.
+    if (remoteSyncedThemeRef.current === theme) {
+      remoteSyncedThemeRef.current = null;
+      return;
+    }
+
+    (async () => {
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert(
+          { user_id: user.id, theme },
+          { onConflict: 'user_id' }
+        );
+      if (error) {
+        console.error('Error saving theme preference:', error);
+      }
+    })().catch((error) => {
+      console.error('Error saving theme preference:', error);
+    });
+  }, [theme, user]);
 
   // Load saved quick rolls from Supabase (if logged in) or cookies (if not)
   useEffect(() => {
@@ -174,8 +311,7 @@ function DiceRoller({ user }) {
     let sum = 0;
     let highest = 0;
 
-    // Use provided modifier or state modifier
-    const appliedModifier = rollModifier !== null ? rollModifier : modifier;
+    const modifierToApply = rollModifier !== null ? rollModifier : modifier;
 
     for (let i = 0; i < count; i++) {
       const roll = rollSingleDie(diceType);
@@ -186,15 +322,13 @@ function DiceRoller({ user }) {
       }
     }
 
-    // Apply modifier to total
-    const totalWithModifier = sum + appliedModifier;
+    const totalWithModifier = sum + modifierToApply;
 
-    // Add animation delay
     setTimeout(() => {
       setRolls(newRolls);
       setDiceTotal(sum);
       setTotal(totalWithModifier);
-      setAppliedModifier(appliedModifier);
+      setAppliedModifier(modifierToApply);
       setHighestRoll(highest);
       setIsRolling(false);
     }, 500);
@@ -506,15 +640,11 @@ function DiceRoller({ user }) {
                       >
                         −
                       </button>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
+                      <ClampedNumberInput
+                        min={1}
+                        max={20}
                         value={newQuickRollCount}
-                        onChange={(e) => {
-                          const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
-                          setNewQuickRollCount(value);
-                        }}
+                        onChange={setNewQuickRollCount}
                         className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-3 text-white text-center font-bold outline-none"
                       />
                       <button
@@ -552,15 +682,11 @@ function DiceRoller({ user }) {
                       >
                         −
                       </button>
-                      <input
-                        type="number"
-                        min="-50"
-                        max="50"
+                      <ClampedNumberInput
+                        min={-50}
+                        max={50}
                         value={newQuickRollModifier}
-                        onChange={(e) => {
-                          const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
-                          setNewQuickRollModifier(value);
-                        }}
+                        onChange={setNewQuickRollModifier}
                         placeholder="0"
                         className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-3 text-white text-center font-bold outline-none placeholder-white/40"
                       />
@@ -639,15 +765,11 @@ function DiceRoller({ user }) {
                 −
               </button>
               <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-4 text-center">
-                <input
-                  type="number"
-                  min="-50"
-                  max="50"
+                <ClampedNumberInput
+                  min={-50}
+                  max={50}
                   value={modifier}
-                  onChange={(e) => {
-                    const value = Math.max(-50, Math.min(50, parseInt(e.target.value) || 0));
-                    setModifier(value);
-                  }}
+                  onChange={setModifier}
                   className="w-full bg-transparent text-white text-3xl font-bold text-center outline-none"
                 />
               </div>
@@ -673,15 +795,11 @@ function DiceRoller({ user }) {
                 −
               </button>
               <div className="flex-1 backdrop-blur-md bg-white/10 border border-white/20 rounded-xl p-4 text-center">
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
+                <ClampedNumberInput
+                  min={1}
+                  max={20}
                   value={diceCount}
-                  onChange={(e) => {
-                    const value = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
-                    setDiceCount(value);
-                  }}
+                  onChange={setDiceCount}
                   className="w-full bg-transparent text-white text-3xl font-bold text-center outline-none"
                 />
               </div>
