@@ -26,9 +26,12 @@ export const supabase = isSupabaseConfigured
         select: () => ({
           eq: () => ({
             order: () => Promise.resolve({ data: [], error: null }),
+            single: () => Promise.resolve({ data: null, error: null }),
+            maybeSingle: () => Promise.resolve({ data: null, error: null }),
           }),
         }),
         insert: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
+        upsert: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
         delete: () => ({
           eq: () => Promise.resolve({ error: null }),
         }),
